@@ -223,20 +223,20 @@ class cli_architecture : gui_config{ // backconnect
         send(s0,("Enter Password> "), sizeof("Enter Password> "), 20);
         while(1){
             string line;
-            char data = 0; // Reading one at a time, hack!
+            char data = 0; 
             while (data != '\n'){
                 ssize_t datarecv = recv(s0, &data, 1, 0);
                 if(datarecv == -1){
-                    if (errno != EAGAIN && errno != EWOULDBLOCK){ //Connection error
+                    if (errno != EAGAIN && errno != EWOULDBLOCK){ 
                         close(s0);
                         return;
                     }
-                } if(datarecv == 0) { //client disconnect
+                } if(datarecv == 0) {
                     close(s0);
                     return;
                 }
                 line += data;
-                if (line.size() > 2048){ // Oh no!
+                if (line.size() > 2048){ 
                     close(s0);
                     return;
                 }
