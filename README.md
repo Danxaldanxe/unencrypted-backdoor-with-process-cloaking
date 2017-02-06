@@ -6,7 +6,7 @@ name. It writes its self in the /etc/rc.local
 Im not liable for damages done by this repo or the end user use.
 This was coded to learn more about string manipulation using c++.
 to compile:
-g++ -std=c++11 -pthread main.cpp -Bstatic
+g++ -std=c++11 -pthread main.cpp 
 
 listening using netcat:
 nc -vlp port#
