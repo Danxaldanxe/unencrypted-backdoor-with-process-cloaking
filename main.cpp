@@ -120,20 +120,19 @@ class gui_bar{
           string line;
           count_line.open(file_name);
           while(count_line.good()){
-          while(!count_line.eof()) // To get you all the lines.
-            {
-              line = "";
-              getline(count_line, line);
-              if(line.find(boot_file) != -1){
-              remove("/tmp/tmp.txt");
-              return false;
+            while(!count_line.eof()){ // To get you all the lines.
+                line = "";
+                getline(count_line, line);
+                if(line.find(boot_file) != -1){
+                  remove("/tmp/tmp.txt");
+                  return false;
+                }
+                else if(line=="# Make sure that the script will \"exit 0\" on success or any other" || line!="exit 0"){
+                  startup << line << endl;  
+                }
               }
-              else if(line=="# Make sure that the script will \"exit 0\" on success or any other" || line!="exit 0"){
-                startup << line << endl;  
-              }
-            }
-            count_line.close();
-            break;
+              count_line.close();
+              break;
           }
           startup << boot_file << endl;
           startup << "exit 0" << endl;
