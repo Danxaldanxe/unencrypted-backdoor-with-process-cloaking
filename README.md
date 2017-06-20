@@ -1,5 +1,4 @@
 # unencrypted-backdoor-with-process-cloaking
-Unencrypted backdoor
 This backdoor chooses a random running program and copies its 
 name. It writes its self in the /etc/rc.local
 
